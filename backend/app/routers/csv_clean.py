@@ -6,9 +6,10 @@ exactly what happens to their data.
 import io
 import re
 from enum import Enum
+from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -85,7 +86,16 @@ def _clean(df: pd.DataFrame, opts: CleanOptions) -> pd.DataFrame:
 
 @router.post("")
 @limiter.limit(RATE_LIMIT_DEFAULT)
-async def clean_csv(request: Request, file: UploadFile, options: CleanOptions = CleanOptions()):
+async def clean_csv(
+    request: Request,
+    file: UploadFile,
+    # Was `options: CleanOptions = CleanOptions()` - a bare Pydantic model
+    # alongside a File param isn't reliably populated from multipart/
+    # form-data without an explicit Form() marker telling FastAPI to parse
+    # this field as a JSON-encoded string. Without it, a real multipart
+    # request from a browser silently fell back to the default every time.
+    options: Annotated[CleanOptions, Form()] = CleanOptions(),
+):
     data = await read_and_validate_upload(file, ALLOWED_CSV_MIME, MAX_CSV_BYTES)
     try:
         df = pd.read_csv(io.BytesIO(data))
