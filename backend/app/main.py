@@ -13,7 +13,11 @@ from app.routers import (
     file_convert,
     image_compress,
     image_convert,
+    invoice,
+    purchase_order,
     qr,
+    quotation,
+    receipt,
 )
 
 app = FastAPI(
@@ -54,6 +58,10 @@ app.include_router(file_convert.router, prefix=API_PREFIX)
 app.include_router(background_remove.router, prefix=API_PREFIX)
 app.include_router(csv_clean.router, prefix=API_PREFIX)
 app.include_router(email_signature.router, prefix=API_PREFIX)
+app.include_router(invoice.router, prefix=API_PREFIX)
+app.include_router(quotation.router, prefix=API_PREFIX)
+app.include_router(purchase_order.router, prefix=API_PREFIX)
+app.include_router(receipt.router, prefix=API_PREFIX)
 
 
 @app.get("/health")

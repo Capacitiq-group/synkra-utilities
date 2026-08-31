@@ -14,6 +14,17 @@ spec that drove these decisions.
 - CSV Cleaner
 - Email Signature Generator
 
+## What's here (Phase 2 — still no account, still no storage)
+- Invoice Generator
+- Quotation Generator
+- Purchase Order Generator
+- Receipt Generator
+
+All four share one PDF renderer (`app/core/documents/`) with 5 selectable
+templates (modern/classic/minimal/bold/compact), a custom accent color,
+and an optional logo fetched from a URL (SSRF-guarded — same mechanism
+as the QR generator's logo, see `app/core/safe_fetch.py`).
+
 Not in this repo yet: link shortener, contact page, inquiry form, chat
 widget — those need accounts/dashboard/DB per the spec and are a separate
 build.

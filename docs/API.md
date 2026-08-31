@@ -92,6 +92,81 @@ ready to paste into Gmail/Outlook signature settings.
 
 ---
 
+## 9–12. Document Generators (Invoice, Quotation, Purchase Order, Receipt)
+
+Phase 2, Sections 20–23 of the product spec. All four share one PDF
+renderer and the same customization model — only the field set differs
+per document type. Basic (anonymous) generation only: no account, no
+persistent storage, nothing is saved server-side. These are document
+generators, not accounting software — no bookkeeping, no ledgers, no
+saved history.
+
+| Endpoint | Document |
+|---|---|
+| `POST /documents/invoice` | Invoice |
+| `POST /documents/quotation` | Quotation |
+| `POST /documents/purchase-order` | Purchase Order |
+| `POST /documents/receipt` | Receipt |
+
+All four take JSON and return `application/pdf`.
+
+### Shared `style` object (every document type has this field)
+```json
+{
+  "template": "modern",
+  "accent_color": "#1a1a2e",
+  "logo_url": "https://acme.co.za/logo.png",
+  "currency_symbol": "R"
+}
+```
+- `template` — one of `modern`, `classic`, `minimal`, `bold`, `compact` (see below).
+- `logo_url` — fetched server-side through the same SSRF-guarded fetcher as the QR generator's logo (`app/core/safe_fetch.py`). Not an upload.
+- `accent_color` — any hex color; drives the header band/sidebar and table accents.
+
+### Shared `LineItem` shape (every document type has an `items` array)
+```json
+{ "description": "Consulting — 3 hours", "quantity": 3, "unit_price": 850, "discount_pct": 0, "tax_pct": 15 }
+```
+Discount is applied to the line's gross amount, tax to the post-discount amount — same order for every document type and in the totals block.
+
+### Invoice — `POST /documents/invoice`
+```json
+{
+  "style": { "template": "modern", "accent_color": "#1a1a2e" },
+  "business": { "name": "Acme Traders", "address": "12 Main Rd, Cape Town", "email": "billing@acme.co.za", "tax_number": "VAT4123456789" },
+  "customer": { "name": "Jane Dlamini", "email": "jane@example.com" },
+  "invoice_number": "INV-1042",
+  "issue_date": "2026-08-31",
+  "due_date": "2026-09-14",
+  "items": [{ "description": "Website hosting — August", "quantity": 1, "unit_price": 450, "tax_pct": 15 }],
+  "payment_instructions": "EFT to Acme Traders, FNB, Acc 62812345678",
+  "notes": "Thank you for your business."
+}
+```
+
+### Quotation — `POST /documents/quotation`
+Same shape as Invoice, with `quote_number`, `valid_until` (instead of `due_date`), and `terms` (instead of `payment_instructions`).
+
+### Purchase Order — `POST /documents/purchase-order`
+`buyer` and `supplier` (instead of `business`/`customer`), `po_number`, `delivery_date`, `delivery_address`, `notes`.
+
+### Receipt — `POST /documents/receipt`
+`seller` and `customer`, `receipt_number`, `transaction_date` (instead of `issue_date`), `payment_method`, `notes`. No due dates, no terms — it's a record of a completed transaction, not accounting software.
+
+### The 5 templates
+| Template | Header | Table style | Font |
+|---|---|---|---|
+| `modern` | Full-width color band | Zebra-striped rows | Helvetica |
+| `classic` | Underline rule | Bordered grid | Times |
+| `minimal` | No decoration | Hairline rules only | Helvetica |
+| `bold` | Left color sidebar | Bordered grid, bold header row | Helvetica Bold |
+| `compact` | No decoration, tight spacing | Hairline rules, small type | Helvetica |
+
+`accent_color` applies on top of whichever template is chosen — pick the
+layout via `template`, pick the brand color via `accent_color`, independently.
+
+---
+
 ## Errors
 
 All endpoints return standard FastAPI error shapes:
@@ -143,6 +218,13 @@ don't eat server space." Two honest options, your call:
 I did not build a lightweight fallback (e.g. python-docx + reportlab)
 because it can't reproduce real DOCX formatting/layout — it would silently
 produce wrong-looking output, which is worse than not shipping the feature.
+
+## This patch also fixes a missing dependency
+`app/core/safe_fetch.py` imports `httpx`, but `httpx` was missing from
+`requirements.txt` — a fresh build would fail at startup the moment
+anything imported it (the QR router already does). `httpx` and
+`reportlab` (used by the new document generators) are both added below.
+Rebuild the image after pulling this in.
 
 ## Deploying
 ```bash
