@@ -4,6 +4,12 @@ Free, no-account, no-dashboard business utilities. Acquisition/SEO layer for
 Synkra — see `docs/API.md` for the full endpoint reference and the product
 spec that drove these decisions.
 
+> **Architecture:** the canonical description of Synkra's PocketBase instances,
+> which repo uses which one, and the identity model lives in one place:
+> [`SYNKRA-ARCHITECTURE.md` in `synkra-os`](https://github.com/Capacitiq-group/synkra-os/blob/main/SYNKRA-ARCHITECTURE.md).
+> Do not restate it here — update it there.
+This service is stateless: no accounts, no storage, no PocketBase connection.
+
 ## What's here (Phase 1 — no account, no dashboard, no storage)
 - QR Code Generator
 - Image Compressor
